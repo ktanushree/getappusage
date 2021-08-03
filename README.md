@@ -11,10 +11,10 @@ The script retrieves both explicit usage and implicit catch-all references. The 
 - **explicit-appid**: This is an explicit reference to the application by using the application ID in the app_id filter in the rule
 
 #### Requirements
-* Active CloudGenix Account
+* Active Prisma SDWAN Account
 * Python >=3.6
 * Python modules:
-    * CloudGenix Python SDK >= 5.5.3b1 - <https://github.com/CloudGenix/sdk-python>
+    * Prisma SDWAN (CloudGenix) Python SDK >= 5.5.3b1 - <https://github.com/CloudGenix/sdk-python>
 
 #### License
 MIT
