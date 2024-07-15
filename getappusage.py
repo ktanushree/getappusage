@@ -5,7 +5,6 @@ Prisma SDWAN script to get app usage. This script lists the policy sets, rules a
 tkamath@paloaltonetworks.com
 
 """
-import cloudgenix
 import pandas as pd
 import os
 import sys
@@ -15,18 +14,21 @@ from random import *
 import argparse
 import logging
 import datetime
+import prisma_sase
 
 
 # Global Vars
-SDK_VERSION = cloudgenix.version
+SDK_VERSION = prisma_sase.version
 SCRIPT_NAME = 'Prisma SDWAN: Get App Usage'
 
 
 # Policy Types
-SECURITY_POL ="security"
+SECURITY_POL ="original_security"
 NW_STACK = "nwstack"
 QOS_STACK = "qosstack"
 NAT_STACK = "natstack"
+SEC_STACK = "securitystack"
+PERF_STACK = "perfstack"
 ORIGINAL = "original"
 BOUND = "BOUND"
 ALL = "ALL"
@@ -35,27 +37,18 @@ ALL_APPS = "ALL_APPS"
 # Set NON-SYSLOG logging to use function name
 logger = logging.getLogger(__name__)
 
+#
+# Service Account Details
+#
 try:
-    from cloudgenix_settings import CLOUDGENIX_AUTH_TOKEN
-
-except ImportError:
-    # will get caught below.
-    # Get AUTH_TOKEN/X_AUTH_TOKEN from env variable, if it exists. X_AUTH_TOKEN takes priority.
-    if "X_AUTH_TOKEN" in os.environ:
-        CLOUDGENIX_AUTH_TOKEN = os.environ.get('X_AUTH_TOKEN')
-    elif "AUTH_TOKEN" in os.environ:
-        CLOUDGENIX_AUTH_TOKEN = os.environ.get('AUTH_TOKEN')
-    else:
-        # not set
-        CLOUDGENIX_AUTH_TOKEN = None
-
-try:
-    from cloudgenix_settings import CLOUDGENIX_USER, CLOUDGENIX_PASSWORD
+    from prismasdwan_settings import PRISMASDWAN_CLIENT_ID, PRISMASDWAN_CLIENT_SECRET, PRISMASDWAN_TSG_ID
+    import prisma_sase
 
 except ImportError:
     # will get caught below
-    CLOUDGENIX_USER = None
-    CLOUDGENIX_PASSWORD = None
+    PRISMASDWAN_CLIENT_ID = None
+    PRISMASDWAN_CLIENT_SECRET = None
+    PRISMASDWAN_TSGID = None
 
 
 # Global Translation Dicts
@@ -92,6 +85,19 @@ qospolid_qosruleslist = {}
 natpolid_natruleslist = {}
 polid_polruleslist = {}
 secpolid_secruleslist = {}
+
+ngfwstackid_policysetlist={}
+ngfwstackname_ngfwstackid = {}
+ngfwstackid_ngfwstackname = {}
+ngfwpolname_ngfwpolid = {}
+ngfwpolid_ngfwpolname = {}
+
+perfstackid_policysetlist={}
+perfstackname_perfstackid = {}
+perfstackid_perfstackname = {}
+perfpolname_perfpolid = {}
+perfpolid_perfpolname = {}
+
 
 def create_dicts(cgx_session, appname):
 
@@ -203,7 +209,7 @@ def create_dicts(cgx_session, appname):
             qosstackid_qosstackname[item["id"]] = item["name"]
 
     else:
-        print("ERR: Could not retrieve Network Policy Set Stacks")
+        print("ERR: Could not retrieve QoS Policy Set Stacks")
         cloudgenix.jd_detailed(resp)
 
 
@@ -223,11 +229,64 @@ def create_dicts(cgx_session, appname):
         print("ERR: Could not retrieve NAT Policy Set Stacks")
         cloudgenix.jd_detailed(resp)
 
+    #
+    # Performance Stacks
+    #
+    print("\tPerformance Policy Stacks")
+    resp = cgx_session.get.perfmgmtpolicysetstacks()
+    if resp.cgx_status:
+        itemlist = resp.cgx_content.get("items", None)
+        for item in itemlist:
+            perfstackid_policysetlist[item["id"]] = item["policyset_ids"]
+            perfstackname_perfstackid[item["name"]] = item["id"]
+            perfstackid_perfstackname[item["id"]] = item["name"]
+
+    else:
+        print("ERR: Could not retrieve Performance Policy Set Stacks")
+        cloudgenix.jd_detailed(resp)
+        
+    #
+    # Security Stacks
+    #
+    print("\tSecurity Stacks")
+    resp = cgx_session.get.ngfwsecuritypolicysetstacks()
+    if resp.cgx_status:
+        itemlist = resp.cgx_content.get("items", None)
+        for item in itemlist:
+            ngfwstackid_policysetlist[item["id"]] = item["policyset_ids"]
+            ngfwstackname_ngfwstackid[item["name"]] = item["id"]
+            ngfwstackid_ngfwstackname[item["id"]] = item["name"]
+
+    else:
+        print("ERR: Could not retrieve Security Policy Set Stacks")
+        cloudgenix.jd_detailed(resp)
 
     #
-    # Security Pol Sets
+    # Security Policy Sets
     #
-    print("\tSecurity Policy Sets & Rules")
+    print("\Security Policy Sets & Rules")
+    resp = cgx_session.get.ngfwsecuritypolicysets()
+    if resp.cgx_status:
+        itemlist = resp.cgx_content.get("items", None)
+        for item in itemlist:
+            ngfwpolname_ngfwpolid[item["name"]] = item["id"]
+            ngfwpolid_ngfwpolname[item["id"]] = item["name"]
+
+            resp = cgx_session.get.ngfwsecuritypolicyrules(ngfwsecuritypolicyset_id=item["id"])
+            if resp.cgx_status:
+                ruleslist = resp.cgx_content.get("items", None)
+                ngfwpolid_ngfwruleslist[item["id"]] = ruleslist
+            else:
+                print("ERR: Could not retrieve Rules for Security Policy Set {}".format(item["name"]))
+
+    else:
+        print("ERR: Could not retrieve Security Policy Sets")
+        cloudgenix.jd_detailed(resp)
+
+    #
+    # Original Security Pol Sets
+    #
+    print("\tOriginal Security Policy Sets & Rules")
 
     resp = cgx_session.get.securitypolicysets()
     if resp.cgx_status:
@@ -241,11 +300,11 @@ def create_dicts(cgx_session, appname):
                 ruleslist = resp.cgx_content.get("items", None)
                 secpolid_secruleslist[item["id"]] = ruleslist
             else:
-                print("ERR: Could not retrieve Rules for Security Policy Set {}".format(item["name"]))
+                print("ERR: Could not retrieve Rules for Original Security Policy Set {}".format(item["name"]))
                 cloudgenix.jd_detailed(resp)
 
     else:
-        print("ERR: Could not retrieve Security Policy Sets")
+        print("ERR: Could not retrieve Original Security Policy Sets")
         cloudgenix.jd_detailed(resp)
 
 
@@ -319,6 +378,29 @@ def create_dicts(cgx_session, appname):
         print("ERR: Could not retrieve NAT Policy Sets")
         cloudgenix.jd_detailed(resp)
 
+    #
+    # Performance Policy Sets
+    #
+    print("\tPerformance Policy Sets & Rules")
+
+    resp = cgx_session.get.perfmgmtpolicysets()
+    if resp.cgx_status:
+        itemlist = resp.cgx_content.get("items", None)
+        for item in itemlist:
+            perfpolname_perfpolid[item["name"]] = item["id"]
+            perfpolid_perfpolname[item["id"]] = item["name"]
+
+            resp = cgx_session.get.perfmgmtpolicysets_perfmgmtpolicyrules(perfmgmtpolicyset_id=item["id"])
+            if resp.cgx_status:
+                ruleslist = resp.cgx_content.get("items", None)
+                perfpolid_perfruleslist[item["id"]] = ruleslist
+            else:
+                print("ERR: Could not retrieve Rules for Performance Policy Set {}".format(item["name"]))
+
+    else:
+        print("ERR: Could not retrieve Performance Policy Sets")
+        cloudgenix.jd_detailed(resp)
+
 
     return appidlist
 
@@ -374,11 +456,6 @@ def go():
                                        "C-Prod: https://api.elcapitan.cloudgenix.com",
                                   default="https://api.elcapitan.cloudgenix.com")
 
-    login_group = parser.add_argument_group('Login', 'These options allow skipping of interactive login')
-    login_group.add_argument("--email", "-E", help="Use this email as User Name instead of prompting",
-                             default=None)
-    login_group.add_argument("--pass", "-P", help="Use this Password instead of prompting",
-                             default=None)
 
     # Commandline for entering Site info
     site_group = parser.add_argument_group('App Specific Information',
@@ -399,40 +476,18 @@ def go():
     # Instantiate API & Login
     ############################################################################
 
-    cgx_session = cloudgenix.API(controller=args["controller"], ssl_verify=False)
+    cgx_session = prisma_sase.API(controller=args["controller"])
     print("{0} v{1} ({2})\n".format(SCRIPT_NAME, SDK_VERSION, cgx_session.controller))
 
-    # login logic. Use cmdline if set, use AUTH_TOKEN next, finally user/pass from config file, then prompt.
-    # figure out user
-    if args["email"]:
-        user_email = args["email"]
-    elif CLOUDGENIX_USER:
-        user_email = CLOUDGENIX_USER
-    else:
-        user_email = None
-
-    # figure out password
-    if args["pass"]:
-        user_password = args["pass"]
-    elif CLOUDGENIX_PASSWORD:
-        user_password = CLOUDGENIX_PASSWORD
-    else:
-        user_password = None
-
-    # check for token
-    if CLOUDGENIX_AUTH_TOKEN and not args["email"] and not args["pass"]:
-        cgx_session.interactive.use_token(CLOUDGENIX_AUTH_TOKEN)
+    if PRISMASDWAN_CLIENT_ID and PRISMASDWAN_CLIENT_SECRET and PRISMASDWAN_TSG_ID:
+        cgx_session.interactive.login_secret(client_id=PRISMASDWAN_CLIENT_ID, client_secret=PRISMASDWAN_CLIENT_SECRET, tsg_id=PRISMASDWAN_TSG_ID)
         if cgx_session.tenant_id is None:
-            print("AUTH_TOKEN login failure, please check token.")
+            print("ERR: Service Account login failure. Please provide a valid Service Account.")
             sys.exit()
 
     else:
-        while cgx_session.tenant_id is None:
-            cgx_session.interactive.login(user_email, user_password)
-            # clear after one failed login, force relogin.
-            if not cgx_session.tenant_id:
-                user_email = None
-                user_password = None
+        print("ERR: No credentials provided. Please provide valid credentials in the prismasdwan_settings.py file. Exiting.")
+        sys.exit()
 
     ############################################################################
     # Create Translation Dicts
