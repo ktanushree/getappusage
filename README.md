@@ -2,8 +2,7 @@
 This utility is used to download application usage across policies in the Prisma SDWAN Controller.
 
 #### Synopsis
-This script can be used to understand all the policy sets (Security, Policies Original, Path Stack, QoS Stack, NAT Stack) and the corresponding rules 
-where the application is referenced. 
+This script can be used to understand all the policy sets (Original Security, Original Policies, Path Stack, QoS Stack, NAT Stack, Security Stack and Performance Stack) and the corresponding rules where the application is referenced. 
 
 The script retrieves both explicit usage and implicit catch-all references. The CSV data lists the type of reference using the following types:
 - **catchall-None**: This is an implicit reference to the application by using *None* in app_id filter in the rule
@@ -14,7 +13,7 @@ The script retrieves both explicit usage and implicit catch-all references. The 
 * Active Prisma SDWAN Account
 * Python >=3.6
 * Python modules:
-    * Prisma SDWAN (CloudGenix) Python SDK >= 5.5.3b1 - <https://github.com/CloudGenix/sdk-python>
+    * Prisma SASE Python SDK >= 6.4.1b1 - <https://github.com/PaloAltoNetworks/prisma-sase-sdk-python>
 
 #### License
 MIT
@@ -84,7 +83,8 @@ TanushreePro:getappusage tanushreekamath$
 #### Version
 | Version | Build | Changes |
 | ------- | ----- | ------- |
-| **1.0.0** | **b1** | Initial Release. |
+| **1.0.0** | **b2** | Updated to use prisma_sase SDK. Added support for Security Stack and Performance Policy |
+|           | **b1** | Initial Release. |
 
 
 #### For more info
