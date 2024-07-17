@@ -21,7 +21,16 @@ MIT
 #### Installation:
  - **Github:** Download files to a local directory, manually run `getappusage.py`. 
 
-### Examples of usage:
+#### Authentication:
+This script uses OAuth2 to authenticate and authorize the use of this utility to configure the Prisma SDWAN controller. To authenticate,
+- Create a Service Account from the Settings -> Identity & Access menu
+- Make sure the right privileges are assigned to the service account.
+- Copy the client ID and client secret generated for this service account
+- Create a file prismasase_settings.py and copy the client ID, client secret and TSG ID of the tenant you intend to manage using this utility. Use prismasase_settings.py.example as a reference.
+
+When you the script, it will look for the prismasase_settings.py file in the directory you're calling these scripts from.
+
+#### Examples of usage:
 Get App Usage for a single App:
 ```
 ./getappusage.py -A WebEx 
