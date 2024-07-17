@@ -23,11 +23,11 @@ SCRIPT_NAME = 'Prisma SDWAN: Get App Usage'
 
 
 # Policy Types
-SECURITY_POL ="original_security"
+SECURITY_POL ="security"
 NW_STACK = "nwstack"
 QOS_STACK = "qosstack"
 NAT_STACK = "natstack"
-SEC_STACK = "securitystack"
+NGFW_STACK = "ngfwstack"
 PERF_STACK = "perfstack"
 ORIGINAL = "original"
 BOUND = "BOUND"
@@ -412,7 +412,17 @@ def getsites(policy_id, policy_type):
         for sid in siteid_secpolid.keys():
             if siteid_secpolid[sid] == policy_id:
                 sites.append(siteid_sitename[sid])
+    
+    elif policy_type == "ngfwstack":
+        for sid in siteid_ngfwstackid.keys():
+            if siteid_ngfwstackid[sid] == policy_id:
+                sites.append(siteid_sitename[sid])
 
+    elif policy_type == "perfstack":
+        for sid in siteid_perfstackid.keys():
+            if siteid_perfstackid[sid] == policy_id:
+                sites.append(siteid_sitename[sid])
+                
     elif policy_type == "nwstack":
         for sid in siteid_nwstackid.keys():
             if siteid_nwstackid[sid] == policy_id:
@@ -506,7 +516,7 @@ def go():
         print("Processing data for app {}".format(appname))
 
         #
-        # Search Security Profiles
+        # Search Original Security Profiles
         #
 
         if datatype == ALL:
@@ -559,6 +569,74 @@ def go():
                                                       "num_sites": len(sites)}, ignore_index=True)
 
 
+        #
+        # Search NGFW STACK
+        #
+        if datatype == ALL:
+            attached_ngfw_stackids = set(ngfwstackid_ngfwstackname.keys())
+        else:
+            attached_ngfw_stackids = set(siteid_ngfwstackid.values())
+
+        attached_ngfw_stackids.discard(None)
+        if len(attached_ngfw_stackids)>0:
+            for stackid in attached_ngfw_stackids:
+                stackname = ngfwstackid_ngfwstackname[stackid]
+                sites = getsites(stackid,NGFW_STACK)
+
+                policysets = ngfwstackid_policysetlist[stackid]
+
+                for polid in policysets:
+                    polname = ngfwpolid_ngfwpolname[polid]
+                    rules = ngfwpolid_ngfwruleslist[polid]
+                    if rules:
+                        for rule in rules:
+                            appids = rule.get("app_def_ids", None)
+
+                            if appids is not None:
+                                if appid in appids:
+                                    appdata = appdata.append({"app_name":appname,
+                                                              "policy_type": "network",
+                                                              "stack_name": stackname,
+                                                              "policy_name": polname,
+                                                              "policy_rule": rule["name"],
+                                                              "reference_type": "specific - appid",
+                                                              "sites": sites,
+                                                              "num_sites": len(sites)}, ignore_index=True)
+
+        #
+        # Search Performance Stack
+        #
+        if datatype == ALL:
+            attached_perf_stackids = set(perfstackid_perfstackname.keys())
+        else:
+            attached_perf_stackids = set(siteid_perfstackid.values())
+
+        attached_perf_stackids.discard(None)
+        if len(attached_perf_stackids)>0:
+            for stackid in attached_perf_stackids:
+                stackname = perfstackid_perfstackname[stackid]
+                sites = getsites(stackid,PERF_STACK)
+
+                policysets = perfstackid_policysetlist[stackid]
+
+                for polid in policysets:
+                    polname = perfpolid_ngfwpolname[polid]
+                    rules = perfpolid_perfruleslist[polid]
+                    if rules:
+                        for rule in rules:
+                            appids = rule.get("app_def_ids", None)
+
+                            if appids is not None:
+                                if appid in appids:
+                                    appdata = appdata.append({"app_name":appname,
+                                                              "policy_type": "network",
+                                                              "stack_name": stackname,
+                                                              "policy_name": polname,
+                                                              "policy_rule": rule["name"],
+                                                              "reference_type": "specific - appid",
+                                                              "sites": sites,
+                                                              "num_sites": len(sites)}, ignore_index=True)
+                                    
         #
         # Search NW STACK
         #
