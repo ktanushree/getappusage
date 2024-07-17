@@ -4,6 +4,8 @@ Prisma SDWAN script to get app usage. This script lists the policy sets, rules a
 
 tkamath@paloaltonetworks.com
 
+Version: 1.0.0b2
+
 """
 import pandas as pd
 import os
