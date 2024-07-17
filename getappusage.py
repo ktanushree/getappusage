@@ -43,14 +43,14 @@ logger = logging.getLogger(__name__)
 # Service Account Details
 #
 try:
-    from prismasdwan_settings import PRISMASDWAN_CLIENT_ID, PRISMASDWAN_CLIENT_SECRET, PRISMASDWAN_TSG_ID
+    from prismasase_settings import PRISMASASE_CLIENT_ID, PRISMASASE_CLIENT_SECRET, PRISMASASE_TSG_ID
     import prisma_sase
 
 except ImportError:
     # will get caught below
-    PRISMASDWAN_CLIENT_ID = None
-    PRISMASDWAN_CLIENT_SECRET = None
-    PRISMASDWAN_TSGID = None
+    PRISMASASE_CLIENT_ID = None
+    PRISMASASE_CLIENT_SECRET = None
+    PRISMASASE_TSG_ID = None
 
 
 # Global Translation Dicts
@@ -491,8 +491,8 @@ def go():
     cgx_session = prisma_sase.API(controller=args["controller"])
     print("{0} v{1} ({2})\n".format(SCRIPT_NAME, SDK_VERSION, cgx_session.controller))
 
-    if PRISMASDWAN_CLIENT_ID and PRISMASDWAN_CLIENT_SECRET and PRISMASDWAN_TSG_ID:
-        cgx_session.interactive.login_secret(client_id=PRISMASDWAN_CLIENT_ID, client_secret=PRISMASDWAN_CLIENT_SECRET, tsg_id=PRISMASDWAN_TSG_ID)
+    if PRISMASASE_CLIENT_ID and PRISMASASE_CLIENT_SECRET and PRISMASASE_TSG_ID:
+        cgx_session.interactive.login_secret(client_id=PRISMASASE_CLIENT_ID, client_secret=PRISMASASE_CLIENT_SECRET, tsg_id=PRISMASASE_TSG_ID)
         if cgx_session.tenant_id is None:
             print("ERR: Service Account login failure. Please provide a valid Service Account.")
             sys.exit()
